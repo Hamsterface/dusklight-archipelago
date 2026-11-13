@@ -113,6 +113,14 @@ int64_t unix_now() {
         .count();
 }
 
+// RGBA8 texels to grays of the same brightness (Rec. 601 weights), alpha kept.
+void to_gray(uint8_t* rgba, size_t size) {
+    for (size_t i = 0; i + 3 < size; i += 4) {
+        const uint32_t y = (rgba[i] * 77u + rgba[i + 1] * 150u + rgba[i + 2] * 29u) >> 8;
+        rgba[i] = rgba[i + 1] = rgba[i + 2] = static_cast<uint8_t>(y);
+    }
+}
+
 void load_index() {
     if (g_indexLoaded) {
         return;
@@ -597,6 +605,21 @@ void poll_decodes() {
             timg->mipmapCount = static_cast<u8>(image->iconMips);
             timg->imageOffset = static_cast<s32>(sizeof(ResTIMG));
             std::memcpy(cover->iconTimg.data() + sizeof(ResTIMG), image->icon.data(), image->icon.size());
+        }
+        // Filler items' boxes: the same cover in grays.
+        cover->grayTexels = cover->texels;
+        to_gray(cover->grayTexels.data(), cover->grayTexels.size());
+        uint8_t spine[4] = {cover->spine.r, cover->spine.g, cover->spine.b, 255};
+        to_gray(spine, sizeof(spine));
+        cover->graySpine = GXColor{spine[0], spine[1], spine[2], 255};
+        GXInitTexObj(&cover->grayTexture, cover->grayTexels.data(), static_cast<u16>(image->width),
+            static_cast<u16>(image->height), GX_TF_RGBA8_PC, GX_CLAMP, GX_CLAMP, GX_TRUE);
+        GXInitTexObjLOD(&cover->grayTexture, GX_LIN_MIP_LIN, GX_LINEAR, 0.0f,
+            static_cast<float>(image->mips - 1), 0.0f, GX_FALSE, GX_TRUE, GX_ANISO_4);
+        if (!cover->iconTimg.empty()) {
+            cover->grayIconTimg = cover->iconTimg;
+            to_gray(cover->grayIconTimg.data() + sizeof(ResTIMG),
+                cover->grayIconTimg.size() - sizeof(ResTIMG));
         }
         e.cover = std::move(cover);
         e.state = State::Ready;

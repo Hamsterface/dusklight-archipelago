@@ -161,6 +161,9 @@ set(RANDOMIZER_SOURCES
         src/ap/mode/overlay.cpp
         src/ap/mode/status.cpp
         src/ap/mode/covers.cpp
+        src/ap/mode/models.cpp
+        src/ap/open_folder.cpp
+        src/ap/item_models.cpp
         src/ap/ap_box.cpp
         src/ap/cover_art.cpp
 )
@@ -294,9 +297,11 @@ target_compile_definitions(ap_gen_test PRIVATE
 add_executable(tls_test ${CMAKE_CURRENT_SOURCE_DIR}/tools/tls_test.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/ap/tls.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ap/emoji.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ap/cover_art.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ap/item_models.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ap/ws_deflate.cpp)
 target_link_libraries(tls_test PRIVATE randomizer_embeds MbedTLS::mbedtls ap_miniz nlohmann_json::nlohmann_json)
 target_include_directories(tls_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/tools)
+target_compile_definitions(tls_test PRIVATE AP_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 if (WIN32)
     target_link_libraries(tls_test PRIVATE ws2_32)
 endif ()

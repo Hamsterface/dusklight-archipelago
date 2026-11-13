@@ -181,6 +181,11 @@ ModResult on_save_loaded(void* ud, ModError* err) {
                              g_state.seed == state.seed && g_conn.slot == conn.slot;
     g_state = state;
     g_redeemedLocations = {g_state.redeemedLocations.begin(), g_state.redeemedLocations.end()};
+    if (!sameSession) {
+        // This save's other-world items, so the first room's look right before the reconnect
+        // (or without one). A connection replaces them with the server's.
+        restore_item_sources(g_state.seed, g_state.slot);
+    }
     g_phase = Phase::Playing;
     if (!haveConn) {
         toast("Archipelago", "This save has no Archipelago connection info.", "warning");

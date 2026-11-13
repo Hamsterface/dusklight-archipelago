@@ -1,6 +1,6 @@
 // Host-side test for the mod's network client: the TLS layer (src/ap/tls.cpp), the text
-// sanitizer (src/ap/text_safe.hpp), WebSocket decompression (src/ap/ws_deflate.cpp) and cover
-// matching (src/ap/cover_art.cpp).
+// sanitizer (src/ap/text_safe.hpp), WebSocket decompression (src/ap/ws_deflate.cpp), cover
+// matching (src/ap/cover_art.cpp) and other worlds' item models (src/ap/item_models.cpp).
 //
 // TlsStream never touches a socket itself, so it can be driven over ordinary blocking
 // sockets here, against real servers, without launching the game. Run with no arguments
@@ -20,6 +20,7 @@
 
 #include "ap/cover_art.hpp"
 #include "ap/emoji.hpp"
+#include "ap/item_models.hpp"
 #include "ap/text_safe.hpp"
 #include "ap/tls.hpp"
 #include "ap/ws_deflate.hpp"
@@ -256,6 +257,150 @@ bool check_emoji() {
     return ok;
 }
 
+// Which of our items another world's item looks like: built-in matching by name, and the
+// player's own rules on top.
+bool check_item_models() {
+    namespace im = ap::item_models;
+    auto hex = [](uint8_t id) {
+        char buf[8];
+        std::snprintf(buf, sizeof(buf), "0x%02X", id);
+        return std::string(buf);
+    };
+    auto built_in = [&](const char* game, const char* item) {
+        return hex(im::builtin_model(game, item));
+    };
+    const std::vector<im::Rule> rules{
+        {"Ocarina of Time", "Deku Shield", 0x2A},
+        {"ocarina of time", "Small Key (Water*", 0x87},
+        {"Super Metroid", "Missile", 0x0E},
+        {"*", "*Trap*", 0x02},
+        {"*", "Bombs (5)", im::kNoModel},
+    };
+    auto with_rules = [&](const char* game, const char* item) {
+        return hex(im::model_for(game, item, rules));
+    };
+    auto parsed = [&](const char* text) {
+        const auto id = im::parse_model(text);
+        return id ? hex(*id) : std::string{"none"};
+    };
+    const std::string none = hex(im::kNoModel);
+    struct Check {
+        const char* what;
+        std::string got;
+        std::string expected;
+    };
+    const std::vector<Check> checks{
+        {"models: rupees by amount", built_in("Ocarina of Time", "Rupees (5)"), "0x02"},
+        {"models: one rupee", built_in("Ocarina of Time", "Rupee (1)"), "0x01"},
+        {"models: rupees over 100", built_in("A Link to the Past", "Rupees (300)"), "0x07"},
+        {"models: rupee by colour", built_in("A Link to the Past", "Blue Rupee"), "0x02"},
+        {"models: not Zelda, no rupees", built_in("Hollow Knight", "Blue Rupee"), none},
+        {"models: rupoor stays", built_in("The Wind Waker", "Rupoor"), none},
+        {"models: hookshot is clawshot", built_in("Ocarina of Time", "Progressive Hookshot"), "0x44"},
+        {"models: longshot is double", built_in("Ocarina of Time", "Longshot"), "0x47"},
+        {"models: not Zelda, no hookshot", built_in("Some Other Game", "Hookshot"), none},
+        {"models: not Zelda, no hearts", built_in("Super Metroid", "Heart Container"), none},
+        {"models: heart piece", built_in("Ocarina of Time", "Piece of Heart (Treasure Chest Game)"), "0x21"},
+        {"models: heart container", built_in("A Link to the Past", "Boss Heart Container"), "0x22"},
+        {"models: bombs by amount", built_in("Ocarina of Time", "Bombs (10)"), "0x0B"},
+        {"models: bomb bag", built_in("Ocarina of Time", "Progressive Bomb Bag"), "0x50"},
+        {"models: bombchus", built_in("Ocarina of Time", "Bombchus (10)"), "0x1B"},
+        {"models: arrows by amount", built_in("Ocarina of Time", "Arrows (30)"), "0x10"},
+        {"models: Ship of Harkinian", built_in("Ship of Harkinian", "Arrows (5)"), "0x0E"},
+        {"models: 2 Ship 2 Harkinian", built_in("2 Ship 2 Harkinian", "Bombs (10)"), "0x0B"},
+        {"models: arrow upgrade is bow", built_in("Ocarina of Time", "Light Arrows"), "0x43"},
+        {"models: quiver", built_in("The Wind Waker", "Progressive Quiver"), "0x55"},
+        {"models: bottle contents", built_in("Ocarina of Time", "Bottle with Red Potion"), "0x61"},
+        {"models: ruto's letter bottle", built_in("Ocarina of Time", "Ruto's Letter"), "0x60"},
+        {"models: small key", built_in("Ocarina of Time", "Small Key (Forest Temple)"), "0x85"},
+        {"models: key ring", built_in("Ocarina of Time", "Small Key Ring (Fire Temple)"), "0x85"},
+        {"models: big key", built_in("A Link to the Past", "Big Key (Eastern Palace)"), "0x92"},
+        {"models: map", built_in("Ocarina of Time", "Map (Deku Tree)"), "0xB6"},
+        {"models: compass", built_in("A Link to the Past", "Compass (Desert Palace)"), "0x99"},
+        {"models: swords", built_in("Ocarina of Time", "Kokiri Sword"), "0x28"},
+        {"models: master sword shows", built_in("A Link to the Past", "Master Sword"), "0x28"},
+        {"models: deku shield", built_in("Ocarina of Time", "Deku Shield"), "0x2B"},
+        {"models: wallet size", built_in("Ocarina of Time", "Giant's Wallet"), "0x36"},
+        {"models: skulltula token stays", built_in("Ocarina of Time", "Gold Skulltula Token"), none},
+        {"models: another TP by name", built_in("Twilight Princess", "Forest Temple Small Key"), "0x85"},
+        {"models: our own game", built_in("Twilight Princess (Dusklight)", "Progressive Clawshot"), "0x44"},
+        {"models: TP portal stays", built_in("Twilight Princess (Dusklight)", "Ordon Spring Portal"), none},
+        {"models: traps stay", built_in("Ocarina of Time", "Ice Trap"), none},
+        {"models: not Zelda, no bombs", built_in("Super Metroid", "Power Bomb"), none},
+        {"models: whole words only", built_in("Ocarina of Time", "Monkey Mask"), none},
+        {"models: no match", built_in("Ocarina of Time", "Deku Nuts (5)"), none},
+        {"models: rule beats built-in", with_rules("Ocarina of Time", "Deku Shield"), "0x2A"},
+        {"models: rule game any case", with_rules("Ocarina of Time", "small key (water temple)"), "0x87"},
+        {"models: rule for other games", with_rules("Super Metroid", "Missile"), "0x0E"},
+        {"models: * rule for all games", with_rules("Hollow Knight", "Spike Trap"), "0x02"},
+        {"models: rule can keep the Sol", with_rules("Ocarina of Time", "Bombs (5)"), none},
+        {"models: built-in under rules", with_rules("Ocarina of Time", "Rupees (20)"), "0x04"},
+        {"models: parse item name", parsed("Progressive Clawshot"), "0x44"},
+        {"models: parse short name", parsed("small key"), "0x85"},
+        {"models: parse number", parsed("0x22"), "0x22"},
+        {"models: parse Sol", parsed("Sol"), none},
+        {"models: parse unknown", parsed("Ocarina"), "none"},
+        {"models: parse unsafe number", parsed("0xDC"), "none"},
+        {"models: glob", std::to_string(im::glob_match("Small Key*", "small key (x)") &&
+                                        !im::glob_match("a*b", "acb x")),
+            "1"},
+    };
+    bool ok = true;
+    for (const Check& check : checks) {
+        std::printf("%-32s ", check.what);
+        if (check.got == check.expected) {
+            std::printf("PASS\n");
+        } else {
+            std::printf("FAIL  got '%s', expected '%s'\n", check.got.c_str(), check.expected.c_str());
+            ok = false;
+        }
+    }
+    return ok;
+}
+
+// The example matches files (examples/item_models): every entry names a look the mod knows.
+// A light reading of the YAML, enough for these files: `  "Item": Look  # comment`.
+bool check_example_models() {
+    namespace im = ap::item_models;
+    bool ok = true;
+    for (const char* name : {"super_metroid.yaml"}) {
+        const std::string path = std::string(AP_SOURCE_DIR) + "/examples/item_models/" + name;
+        std::ifstream in(path);
+        int entries = 0;
+        std::string line;
+        while (std::getline(in, line)) {
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
+            if (line.rfind("  \"", 0) != 0) {
+                continue;
+            }
+            const size_t close = line.find("\":", 3);
+            if (close == std::string::npos) {
+                continue;
+            }
+            std::string look = line.substr(close + 2);
+            look = look.substr(0, look.find(" #"));
+            while (!look.empty() && look.front() == ' ') {
+                look.erase(look.begin());
+            }
+            while (!look.empty() && look.back() == ' ') {
+                look.pop_back();
+            }
+            ++entries;
+            const auto id = im::parse_model(look);
+            if (!id || *id == im::kNoModel) {
+                std::printf("example %-24s FAIL  '%s' isn't a look\n", name, look.c_str());
+                ok = false;
+            }
+        }
+        std::printf("example %-24s %s (%d entries)\n", name, ok && entries > 0 ? "PASS" : "FAIL",
+            entries);
+        ok = ok && entries > 0;
+    }
+    return ok;
+}
+
 bool check_covers() {
     using ap::cover_art::file_stem;
     using ap::cover_art::pick_game;
@@ -480,6 +625,9 @@ int main(int argc, char** argv) {
     failures += check_emoji() ? 0 : 1;
     std::printf("\n");
     failures += check_covers() ? 0 : 1;
+    std::printf("\n");
+    failures += check_item_models() ? 0 : 1;
+    failures += check_example_models() ? 0 : 1;
     std::printf("\n");
     failures += check_deflate() ? 0 : 1;
     std::printf("\n");

@@ -46,6 +46,7 @@ except what's listed here). Ours:
 | `src/ap/mode/slot.cpp` | Slot data into lookup tables; the seed rebuilt from it. |
 | `src/ap/mode/items.cpp` | Client callbacks, the check resolver and give observer, sending checks, delivering items, Collect Dungeon on Completion, the goal. |
 | `src/ap/mode/hooks.cpp`, `death_link.cpp`, `boxes.cpp` | Gameplay hooks (AP item scale, Transform Anywhere), death link, game box glue. |
+| `src/ap/mode/models.cpp`, `src/ap/item_models.*` | Other worlds' items that look like one of ours: the per-location model, `item_models.yaml`, the borrowed get-item text; `item_models.cpp` is the matching (pure, tested by `tls_test`). |
 | `src/ap/mode/saves.cpp` | The new-save connection window and save lifecycle. |
 | `src/ap/mode/tracker.cpp`, `messages.cpp`, `hints.cpp`, `overlay.cpp`, `status.cpp` | The Archipelago window's tabs, and the overlay's content. |
 | `src/ap/ap_client.*` | The Archipelago protocol client (packets, data package, hints). |
@@ -108,6 +109,16 @@ except what's listed here). Ours:
 - It has no message of its own, so the get-item demo is pointed at message 120 (the Foolish
   Item's) and its text is overridden per pickup with "You found X's Y". The override consumes
   itself, so text can never lag a pickup.
+- **Looking like one of ours.** When another world's item matches one of our items by name
+  (`item_models.cpp`: built-in rules, then the player's `item_models.yaml`), `resolve_check`
+  keeps the item as `0xDC` and sets only `display_item`, as the randomizer does for Foolish
+  Items. The check commits that, so the held-up item matches the one on the ground. The
+  get-item demo then opens that item's own message (`item + 0x65`) instead of 120, so the text
+  box shows its icon; `ap_item_text` is registered on each such message as a pickup first needs
+  it, and answers only the message the pickup armed. Every model on offer is something the
+  randomizer itself places (or a progressive item turns into), so each draws on the ground,
+  held up and in the text box. Unmatched items keep `0xDC` as their display item, so the Sol
+  scale, game boxes and the cover icon (all keyed on the display item) are unchanged for them.
 - **Which location an actor is.** The check resolver's `giver_actor` is the item actor itself
   (field item, shop item, heart container, key all resolve in their create), so `resolve_check`
   maps actor to location. The held-up item (`fpcNm_Demo_Item_e`) carries the pickup's committed

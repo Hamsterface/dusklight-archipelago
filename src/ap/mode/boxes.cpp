@@ -15,7 +15,8 @@ bool g_boxPromptShown = false;
 
 // Used only in this file; defined below.
 static std::string game_for_location(const std::string& location);
-static std::string game_for_actor(const void* actor);
+static std::string location_for_actor(const void* actor);
+static bool gray_box(const std::string& location);
 static void choose_boxes(ModContext*, UiDialogHandle, void*);
 static void choose_sols(ModContext*, UiDialogHandle, void*);
 static void prompt_boxes();
@@ -28,8 +29,8 @@ static std::string game_for_location(const std::string& location) {
 }
 
 
-// The game that owns the AP item an actor shows, or "" when we can't tell.
-static std::string game_for_actor(const void* actor) {
+// The location of the AP item an actor shows, or "" when we can't tell.
+static std::string location_for_actor(const void* actor) {
     std::string location;
     if (fopAcM_GetName(const_cast<void*>(actor)) == fpcNm_Demo_Item_e) {
         // Held up: its give tag names its check. Without one we know, the pickup resolved just
@@ -45,11 +46,18 @@ static std::string game_for_actor(const void* actor) {
     } else if (const auto loc = g_actorLocation.find(actor); loc != g_actorLocation.end()) {
         location = loc->second;
     }
-    const auto owner = g_placementOwner.find(location);
-    if (owner == g_placementOwner.end()) {
-        return {};
+    return location;
+}
+
+// Whether the item at a location shows as a gray box: Archipelago calls it filler (none of
+// progression, useful or trap). Traps stay in colour, so a gray box is always harmless; items
+// we know nothing about stay in colour too.
+static bool gray_box(const std::string& location) {
+    if (!cfg_on(g_cfgGrayFiller)) {
+        return false;
     }
-    return g_client.gameOfSlotName(owner->second);
+    const auto flags = g_placementFlags.find(location);
+    return flags != g_placementFlags.end() && (flags->second & 7) == 0;
 }
 
 HookAction pre_item_draw_base(ModContext*, void* args, void* retval, void*) {
@@ -57,10 +65,11 @@ HookAction pre_item_draw_base(ModContext*, void* args, void* retval, void*) {
     if (item == nullptr || item->getDisplayItemNo() != kApItem || !cfg_on(g_cfgBoxes)) {
         return HOOK_CONTINUE;
     }
-    const std::string game = game_for_actor(item);
+    const std::string location = location_for_actor(item);
+    const std::string game = game_for_location(location);
     const covers::Cover* cover = game.empty() ? nullptr : covers::get(game);
     const bool held = fopAcM_GetName(item) == fpcNm_Demo_Item_e;
-    if (cover == nullptr || !box::draw(item, *cover, held)) {
+    if (cover == nullptr || !box::draw(item, *cover, held, gray_box(location))) {
         return HOOK_CONTINUE;
     }
     *static_cast<int*>(retval) = 1;
@@ -151,7 +160,9 @@ void post_msg_item_exec(ModContext*, void* args, void*, void*) {
     if (pane == nullptr || cover == nullptr || cover->iconTimg.empty()) {
         return;
     }
-    const auto* timg = reinterpret_cast<const ResTIMG*>(cover->iconTimg.data());
+    const std::vector<uint8_t>& icon =
+        gray_box(g_heldLocation) && !cover->grayIconTimg.empty() ? cover->grayIconTimg : cover->iconTimg;
+    const auto* timg = reinterpret_cast<const ResTIMG*>(icon.data());
     if (const JUTTexture* tex = pane->getTexture(0); tex != nullptr && tex->getTexInfo() == timg) {
         return;  // already showing it
     }

@@ -12,6 +12,7 @@
 #include "../ap_overlay.hpp"
 #include "../ap_tracker.hpp"
 #include "../emoji.hpp"
+#include "../item_models.hpp"
 #include "../data_version.hpp"
 #include "../text_safe.hpp"
 
@@ -124,6 +125,8 @@ inline std::unordered_map<std::string, std::string> g_apItemText;    // location
 inline std::unordered_map<std::string, std::string> g_placementOwner;
 // ... and its Archipelago classification (1 progression, 2 useful, 4 trap; 0 filler).
 inline std::unordered_map<std::string, int> g_placementFlags;
+// ... and its name in its own game (what decides whether it looks like one of our items).
+inline std::unordered_map<std::string, std::string> g_placementItem;
 // Item actors that resolved to an AP item -> their location (from the check resolver).
 inline std::unordered_map<const void*, std::string> g_actorLocation;
 // Give tag (fopAc_ac_c::mItemGiveTag) -> location. The item Link holds up carries its check's
@@ -178,6 +181,12 @@ inline std::string g_genError;
 
 // AP item text
 inline std::string g_armedText;
+// The message the pickup's text box opens with: the Foolish Item's (the Archipelago Item has
+// none), or, when the item looks like one of ours, that item's own get-item message, so the
+// box shows that item's icon.
+inline uint16_t g_armedMessage = kApItemDonorMessage;
+// Messages ap_item_text is registered on (for every language), so each is registered once.
+inline std::unordered_set<uint16_t> g_textOverrideIds;
 // The get-item text box showing our text: it borrows the Foolish Item's message, so the box
 // thinks it's a Foolish Item (see post_msg_item_exec). Set when our text is served; the box
 // that sees it first claims it.
@@ -260,6 +269,11 @@ inline ConfigVarHandle g_cfgBoxes = 0;     // other worlds' items as game boxes
 inline ConfigVarHandle g_cfgSgdbKey = 0;   // the player's SteamGridDB API key
 inline ConfigVarHandle g_cfgBoxChoice = 0; // 0: not asked yet, 1: game boxes, 2: Sols
 inline ConfigVarHandle g_cfgSkipFinished = 0; // strike out checks holding finished players' items
+inline ConfigVarHandle g_cfgNativeModels = 0;  // other worlds' items look like ours when they match
+inline ConfigVarHandle g_cfgGrayFiller = 0;    // filler items' game boxes in grays
+// The player's own matches (item_models.yaml), and how loading them went.
+inline std::vector<item_models::Rule> g_modelRules;
+inline std::string g_modelStatus;
 template <typename T>
 bool read_blob(const char* name, T& out) {
     size_t size = 0;
@@ -460,6 +474,22 @@ void post_link_dead_init(ModContext*, void* args, void*, void*);
 void post_link_fog_dead_init(ModContext*, void* args, void*, void*);
 void on_bounced(const json& p);
 void tick_death_link();
+
+// mode/models.cpp
+// The model an AP item at this location shows: one of ours when it matches, else kApItem.
+uint8_t native_model(const std::string& location);
+// From the slot data and the room's games, and saved beside the seed's files for next time.
+void remember_item_sources(const std::string& seed, const std::string& slot);
+// A save's saved copy, for its items until (or without) a connection.
+void restore_item_sources(const std::string& seed, const std::string& slot);
+// The get-item message for one of our items (as the game numbers them).
+uint16_t item_get_message(uint8_t item);
+// Have ap_item_text answer this message from now on (once per message, every language).
+void ensure_item_text(uint16_t message);
+void forget_item_text();
+// Read item_models.yaml (writing the template first if there's none). Returns false on problems.
+bool load_item_models();
+std::filesystem::path item_models_path();
 
 // mode/boxes.cpp
 HookAction pre_item_draw_base(ModContext*, void* args, void* retval, void*);

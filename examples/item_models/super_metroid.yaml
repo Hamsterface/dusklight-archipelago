@@ -1,0 +1,47 @@
+# Super Metroid items that look like an item from Twilight Princess.
+#
+# Copy everything below into your item_models.yaml (Status page, F1: Item models, then "Open
+# item models folder"), or add the lines you want under a "Super Metroid" heading there, then
+# press "Reload item models".
+#
+# As an example template, some of the settings here may be a bit of a stretch just to include
+# everything, but hopefully it makes for a fun demonstration of the feature.
+
+"Super Metroid":
+  # Ammo expansions: Super Metroid's minor items, so they look like ammo.
+  "Missile": Arrows 10
+  "Super Missile": Arrows 20
+  "Power Bomb": Bombs 10
+
+  # Energy tanks
+  "Energy Tank": Heart Container
+  "Reserve Tank": Empty Bottle
+
+  # Morph Ball and what goes with it
+  "Morph Ball": Ball and Chain        # a ball that gets you through
+  "Bomb": Bomb Bag
+  "Spring Ball": Spinner              # rolling, bouncing movement
+
+  # Beams, as Twilight Princess's ranged and charged weapons
+  "Charge Beam": Progressive Bow      # draw, hold, release
+  "Ice Beam": Progressive Dominion Rod  # turns enemies into platforms; the rod moves statues
+  "Wave Beam": Gale Boomerang         # passes through what's in the way
+  "Spazer": Slingshot                 # a spread of small shots
+  "Plasma Beam": Ordon Sword          # the strongest beam, the sword
+
+  # Suits
+  "Varia Suit": Magic Armor
+  "Gravity Suit": Zora Armor          # for moving freely underwater
+
+  # Movement
+  "Hi-Jump Boots": Iron Boots
+  "Speed Booster": Horse Call         # run fast: call Epona
+  "Grappling Beam": Progressive Clawshot
+  "Space Jump": Double Clawshot       # getting around in the air
+  "Screw Attack": Progressive Hidden Skill  # a spinning attack
+
+  # Visors
+  "X-Ray Scope": Hawkeye              # seeing what's hidden, far off
+
+  # Filler. "No Energy" stays as it is: it can stand in for a major item.
+  "Nothing": Green Rupee

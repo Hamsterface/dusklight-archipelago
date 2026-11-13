@@ -96,7 +96,18 @@ ModResult activate() {
         skip.type = CONFIG_VAR_BOOL;
         skip.default_bool = true;
         svc_mng.config->register_var(svc_mng.mod_ctx, &skip, &g_cfgSkipFinished);
+        ConfigVarDesc native = CONFIG_VAR_DESC_INIT;
+        native.name = "nativeItemModels";
+        native.type = CONFIG_VAR_BOOL;
+        native.default_bool = true;
+        svc_mng.config->register_var(svc_mng.mod_ctx, &native, &g_cfgNativeModels);
+        ConfigVarDesc gray = CONFIG_VAR_DESC_INIT;
+        gray.name = "grayFillerBoxes";
+        gray.type = CONFIG_VAR_BOOL;
+        gray.default_bool = true;
+        svc_mng.config->register_var(svc_mng.mod_ctx, &gray, &g_cfgGrayFiller);
     }
+    load_item_models();
 
     svc_mng.item->observe_gives(svc_mng.mod_ctx, observe_give, nullptr, &g_observer);
 
@@ -146,7 +157,7 @@ void deactivate() {
     g_hints.clear();
     g_selectedHint = 0;
     ++g_hintsVersion;
-    g_textOverrides.clear();
+    forget_item_text();
     if (g_resolver != 0) {
         svc_mng.item->clear_check_resolver(svc_mng.mod_ctx, g_resolver);
         g_resolver = 0;
@@ -246,9 +257,9 @@ void on_get_item_demo(void* link) {
         return;
     }
     if (alink->mProcVar2.field_0x300c != kApItem) {
-        if (alink->mProcVar2.field_0x300c == dItemNo_Randomizer_FOOLISH_ITEM_e) {
-            g_armedFrames = 0;  // a real Foolish Item uses the same message
-        }
+        // Our text may have borrowed this item's own message (the Foolish Item's, or the one
+        // an AP item looked like), and this pickup's text is its own.
+        g_armedFrames = 0;
         // Any other pickup's text box is its own, even at the address ours had.
         g_apTextServed = false;
         g_apTextBox = nullptr;
@@ -267,10 +278,15 @@ void on_get_item_demo(void* link) {
         g_armedText = "You found another player's item!";
     }
     g_heldLocation = location;
+    // Shown as one of our items: open that item's own get-item message (our text replaces its
+    // text), so the text box shows that item's icon as well. Otherwise the Foolish Item's.
+    const uint8_t model = native_model(location);
+    g_armedMessage = model != kApItem ? item_get_message(model) : kApItemDonorMessage;
+    ensure_item_text(g_armedMessage);
     g_armedFrames = 600;
     g_apTextServed = false;  // this pickup's text box claims it when the text is served
     g_apTextBox = nullptr;
-    alink->field_0x32cc = kApItemDonorMessage;
+    alink->field_0x32cc = g_armedMessage;
 }
 
 }  // namespace ap

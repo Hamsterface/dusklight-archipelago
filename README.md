@@ -42,8 +42,9 @@ Then:
 3. Press **Connect and start**. The seed is built from the server's data, which takes a few
    seconds, and then you continue to name entry as usual.
 4. Play. Checks are sent as you collect them, and items other players find for you arrive
-   automatically. Items belonging to other worlds appear as a Sol (or as their game's box, see
-   below) and say who they belong to.
+   automatically. Items belonging to other worlds look like the matching item from this game when
+   there is one (a rupee, a key, the Clawshot for a Hookshot), otherwise a Sol or their game's
+   box (see below), and say who they belong to.
 
 Loading an existing Archipelago save reconnects by itself. If the room moved to a different
 port, open the **Archipelago** tab in the menu bar (F1), change the server there, and press
@@ -108,13 +109,54 @@ default.
   <img src="docs/images/overlay.webp" alt="The overlay during play: connection, checks, logic and open hints" width="80%">
 </p>
 
+### Items that look like this game's
+
+Other players' items from Zelda games that match one of Twilight Princess's items look like
+it, on the ground, in Link's hands and in the text box: "Rupees (5)" or "Blue Rupee" is a blue
+rupee, a Hookshot is the Clawshot, and it also matches hearts, keys, boss keys, maps,
+compasses, bombs, bombchus, arrows, bows, quivers, bottles, swords, shields, tunics, boots,
+wallets, the boomerang, lantern, slingshot and ocarina. Another Twilight Princess world's items
+match by name. Traps never match. Items from other games only match through your own entries
+(below). Anything else is a Sol, or its game's box.
+
+Add your own matches in `item_models.yaml`, next to the covers in
+`\TwilitRealm\Dusklight\mod_data\com.noahsmaximum.dusklight_archipelago\archipelago`. It's
+written the first time the mode starts, with instructions and examples:
+
+```yaml
+"Ocarina of Time":
+  "Deku Shield": Wooden Shield
+"Super Metroid":
+  "Missile": Arrows 10
+  "Grappling Beam": Clawshot
+"*":                 # every game
+  "*Trap*": Sol      # * matches anything; Sol keeps an item as it was
+```
+
+Under each game's name (as the room lists it), give an item's name and one of this game's items
+(as the randomizer names them, such as "Progressive Clawshot" or "Forest Temple Big Key", or a
+short name like Clawshot, Small Key or Bottle). Your matches win over the built-in ones. After
+editing, highlight **Item models** on the Status page (F1) and press **Reload item models**. That
+pane says how many custom matches were added, or what it couldn't read, and **Open item models
+folder** takes you to the file. Turn **Show as this game's items** off there to go back to
+Sols and boxes for everything.
+
+Ready-made matches for some games are in [examples/item_models](examples/item_models). Copy
+one's entries into your `item_models.yaml`. [Super Metroid](examples/item_models/super_metroid.yaml)
+covers every item that game places, without making any of its major items look like filler.
+
 ### Game boxes
 
-Other players' items can appear as their game's box art instead of a Sol. Covers come from
+Other players' items that don't match one of ours can appear as their game's box art instead of
+a Sol. Covers come from
 [SteamGridDB](https://www.steamgriddb.com) using your free API key (sign in, then Preferences →
 API). The mod asks on first play, and you can change it later under **Other players' items** on
 the Status page (F1). Covers download once to `\TwilitRealm\Dusklight\mod_data\com.noahsmaximum.dusklight_archipelago\archipelago\covers`. Games
 SteamGridDB doesn't have stay Sols, and so does everything if there's no key.
+
+Boxes for items their world marks as filler show in grays, so you can tell them apart from
+progression and useful items at a glance. Traps keep their colour. Turn this off with **Gray
+boxes for filler** on the Status page.
 
 The **Covers** tab lists every game in the room and the cover it got. Covers the mod wasn't sure
 about are marked "best guess". Pick a game to search SteamGridDB yourself and choose the right

@@ -29,6 +29,7 @@ void on_connected(const json& p) {
         write_state();
     }
     want_covers();
+    remember_item_sources(g_slotSeed, g_client.info().slot);
     g_checked.clear();
     for (const auto& id : p.value("checked_locations", json::array())) {
         if (id.is_number_integer()) {
@@ -52,6 +53,7 @@ void on_connected(const json& p) {
                 "warning", 8000);
             g_client.disconnect();
             g_haveSlot = false;
+            restore_item_sources(g_state.seed, g_state.slot);  // not that room's items
             return;
         }
         if (g_needsRegen) {
@@ -156,7 +158,8 @@ bool resolve_check(ModContext*, const ItemCheckInfo* info, ItemCheckResolution* 
             return true;
         }
     }
-    // Runs after the randomizer's resolver; only remembers where the last AP item came from.
+    // Runs after the randomizer's resolver: remembers where the last AP item came from, and
+    // shows it as one of our items when it matches one.
     if (info->current_item == kApItem) {
         const auto locs = locations_for_check(info->name);
         if (!locs.empty()) {
@@ -166,6 +169,14 @@ bool resolve_check(ModContext*, const ItemCheckInfo* info, ItemCheckResolution* 
             }
             // A new pickup: the next held item is this one, unless its give tag says otherwise.
             g_heldActor = nullptr;
+            // Still the Archipelago Item (what's given, its jingle and text): only the model
+            // changes. The check commits it, so the item Link holds up looks the same.
+            if (const uint8_t model = native_model(locs.front()); model != kApItem) {
+                out->item = kApItem;
+                out->display_item = model;
+                out->was_resolved = true;
+                return true;
+            }
         }
     }
     return false;
@@ -222,8 +233,12 @@ void observe_give(ModContext*, const ItemGiveInfo* info, void*) {
     }
 }
 
-bool ap_item_text(ModContext*, const MessageOverrideContext*, MessageTextData* out, void*) {
+bool ap_item_text(ModContext*, const MessageOverrideContext* message, MessageTextData* out, void*) {
     if (g_armedFrames <= 0 || g_armedText.empty()) {
+        return false;
+    }
+    // Registered on every message an AP item can borrow; only the one this pickup armed is ours.
+    if (message != nullptr && message->message_id != g_armedMessage) {
         return false;
     }
     // Sanitized again at the sink: whatever the source, the renderer only ever sees printable
@@ -234,8 +249,8 @@ bool ap_item_text(ModContext*, const MessageOverrideContext*, MessageTextData* o
     buf.push_back(0);
     out->text = buf.data();
     out->text_size = buf.size();
-    // Consume it: the next Archipelago item re-arms with its own text, and a real Foolish
-    // Item (which shares this message) must not inherit it.
+    // Consume it: the next Archipelago item re-arms with its own text, and a real item that
+    // shares this message (the Foolish Item, or the item ours looks like) must not inherit it.
     g_armedFrames = 0;
     g_apTextServed = true;
     return true;

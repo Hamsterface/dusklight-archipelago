@@ -208,11 +208,15 @@ bool load_slot_data(const json& slotData, std::string& err) {
     g_expected.clear();
     g_placementOwner.clear();
     g_placementFlags.clear();
+    g_placementItem.clear();
     const json placements = slotData.value("placements", json::object());
     for (const auto& [loc, v] : placements.items()) {
         if (v.is_object()) {
             g_placementOwner[loc] = v.value("player", "");
             g_placementFlags[loc] = json_num(v, "flags", 1);
+            if (const json name = v.value("name", json()); name.is_string()) {
+                g_placementItem[loc] = name.get<std::string>();
+            }
         }
         g_expected[loc] = v.is_object() ? fmt::format("{} ({})", v.value("name", "?"),
                                               v.value("player", "?"))
@@ -423,13 +427,10 @@ void after_seed_activated() {
         g_resolver = 0;
     }
     svc_mng.item->set_check_resolver(svc_mng.mod_ctx, nullptr, resolve_check, nullptr, &g_resolver);
-    g_textOverrides.clear();
-    for (auto lang : {MESSAGE_LANGUAGE_ENGLISH, MESSAGE_LANGUAGE_GERMAN, MESSAGE_LANGUAGE_FRENCH,
-             MESSAGE_LANGUAGE_SPANISH, MESSAGE_LANGUAGE_ITALIAN, MESSAGE_LANGUAGE_JAPANESE})
-    {
-        g_textOverrides.push_back(
-            mods::flow::override_message_fn(0, kApItemDonorMessage, lang, ap_item_text));
-    }
+    // Items that look like one of ours borrow that item's message instead; those are
+    // registered as pickups need them (ensure_item_text), on top of the randomizer's text.
+    forget_item_text();
+    ensure_item_text(kApItemDonorMessage);
 }
 
 }  // namespace ap::internal

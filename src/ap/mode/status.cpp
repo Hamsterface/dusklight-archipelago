@@ -2,10 +2,48 @@
 
 #include "internal.hpp"
 
+#include "../open_folder.hpp"
+
 namespace ap::internal {
 namespace {
 
+// How item_models.yaml loaded, in the Item models pane. That pane is rebuilt whenever its row
+// is highlighted (and cleared when another is), so only its own Reload button updates it.
+UiElementHandle g_modelStatusText = 0;
+// The Item models row, shown grayed while "Show as this game's items" is off. Groups can't be
+// disabled, so it's a look (the ap-off class) and its pane's buttons are what's disabled.
+UiElementHandle g_modelsGroup = 0;
+bool g_modelsGroupOff = false;
 
+bool models_off(ModContext*, void*) {
+    return !cfg_on(g_cfgNativeModels);
+}
+
+// A path as RML that fits the help pane: RML only wraps at spaces, and a path's folders run
+// together without any, so it breaks after a separator once a line gets long.
+std::string wrapped_path(const std::filesystem::path& path) {
+    constexpr size_t kLine = 40;
+    const std::string text = std::filesystem::path(path).make_preferred().string();
+    std::string out;
+    std::string part;
+    size_t line = 0;
+    for (const char c : text) {
+        part += c;
+        if (c == '\\' || c == '/') {
+            if (line > 0 && line + part.size() > kLine) {
+                out += "<br/>";
+                line = 0;
+            }
+            out += rml_escape(part);
+            line += part.size();
+            part.clear();
+        }
+    }
+    if (line > 0 && line + part.size() > kLine) {
+        out += "<br/>";
+    }
+    return out + rml_escape(part);
+}
 
 }  // namespace
 
@@ -13,7 +51,8 @@ namespace {
 static void press_reconnect(ModContext*, void*);
 static void press_disconnect(ModContext*, void*);
 static std::string status_text();
-static ModResult build_status_tab(ModContext* ctx, UiWindowHandle, UiElementHandle left, UiElementHandle, void*, ModError*);
+static ModResult build_models_pane(ModContext* ctx, UiElementHandle pane, void*, ModError*);
+static ModResult build_status_tab(ModContext* ctx, UiWindowHandle, UiElementHandle left, UiElementHandle right, void*, ModError*);
 static ModResult update_status_tab(ModContext* ctx, void*, ModError*);
 
 static void press_reconnect(ModContext*, void*) {
@@ -52,8 +91,53 @@ static std::string status_text() {
     return s;
 }
 
-static ModResult build_status_tab(ModContext* ctx, UiWindowHandle, UiElementHandle left, UiElementHandle,
-    void*, ModError*) {
+// The Item models row's pane: what the file is for, how it loaded, where it is, and buttons to
+// reload it or open its folder.
+static ModResult build_models_pane(ModContext* ctx, UiElementHandle pane, void*, ModError*) {
+    if (!cfg_on(g_cfgNativeModels)) {
+        svc_mng.ui->pane_add_rml(ctx, pane,
+            "<b>Show as this game's items is off</b>, so no matches are used, built-in or "
+            "your own.",
+            nullptr);
+    }
+    svc_mng.ui->pane_add_rml(ctx, pane,
+        "Your own matches for other worlds' items go in item_models.yaml. Under a game's name, "
+        "list its items and which of this game's items each should look like; the file "
+        "explains how, with examples. Your matches win over the built-in ones.",
+        nullptr);
+    g_modelStatusText = 0;
+    svc_mng.ui->pane_add_text(ctx, pane, g_modelStatus.c_str(), &g_modelStatusText);
+    svc_mng.ui->pane_add_rml(ctx, pane, wrapped_path(item_models_path()).c_str(), nullptr);
+    UiControlDesc reload = UI_CONTROL_DESC_INIT;
+    reload.kind = UI_CONTROL_BUTTON;
+    reload.label = "Reload item models";
+    reload.is_disabled = models_off;
+    reload.on_pressed = [](ModContext* c, void*) {
+        const bool ok = load_item_models();
+        if (g_modelStatusText != 0) {
+            svc_mng.ui->elem_set_text(c, g_modelStatusText, g_modelStatus.c_str());
+        }
+        if (!ok) {
+            toast("Archipelago", g_modelStatus, "warning", 8000);
+        }
+    };
+    svc_mng.ui->pane_add_control(ctx, pane, &reload, nullptr);
+    UiControlDesc folder = UI_CONTROL_DESC_INIT;
+    folder.kind = UI_CONTROL_BUTTON;
+    folder.label = "Open item models folder";
+    folder.is_disabled = models_off;
+    folder.on_pressed = [](ModContext*, void*) {
+        if (!open_folder(item_models_path().parent_path())) {
+            toast("Archipelago", "Couldn't open the folder: " +
+                item_models_path().parent_path().make_preferred().string(), "warning", 8000);
+        }
+    };
+    svc_mng.ui->pane_add_control(ctx, pane, &folder, nullptr);
+    return MOD_OK;
+}
+
+static ModResult build_status_tab(ModContext* ctx, UiWindowHandle, UiElementHandle left,
+    UiElementHandle right, void*, ModError*) {
     g_editServer = g_conn.server;
     svc_mng.ui->pane_add_section(ctx, left, "Connection");
     g_statusWindowText = 0;
@@ -106,10 +190,28 @@ static ModResult build_status_tab(ModContext* ctx, UiWindowHandle, UiElementHand
         "out in the tracker and left off the in-logic list: nobody needs those items any more.");
 
     svc_mng.ui->pane_add_section(ctx, left, "Other players' items");
+    add_bound(ctx, left, UI_CONTROL_TOGGLE, "Show as this game's items", g_cfgNativeModels,
+        "Items from other Zelda games that match one of this game's items look like it: "
+        "rupees as rupees, a Hookshot as the Clawshot, and keys, maps, bombs, arrows, "
+        "bottles, swords and more. Other games' items only match through your own entries. Items that don't match show as their game's box, or a Sol. "
+        "Applies to items that appear from now on. Add your own matches under Item models.");
+    UiGroupDesc models = UI_GROUP_DESC_INIT;
+    models.label = "Item models";
+    models.build = build_models_pane;
+    g_modelsGroup = 0;
+    svc_mng.ui->pane_add_group(ctx, left, right, &models, &g_modelsGroup);
+    g_modelsGroupOff = !cfg_on(g_cfgNativeModels);
+    if (g_modelsGroup != 0) {
+        svc_mng.ui->elem_set_class(ctx, g_modelsGroup, "ap-off", g_modelsGroupOff);
+    }
     add_bound(ctx, left, UI_CONTROL_TOGGLE, "Show as game boxes", g_cfgBoxes,
-        "Items that belong to other worlds show as the box of the game they're for, with its "
-        "cover art, instead of a Sol. Covers come from SteamGridDB with your own API key and "
+        "Items that belong to other worlds (and don't look like one of this game's items) show "
+        "as the box of the game they're for, with its cover art, instead of a Sol. Covers come "
+        "from SteamGridDB with your own API key and "
         "download once per game. Games without art stay Sols.");
+    add_bound(ctx, left, UI_CONTROL_TOGGLE, "Gray boxes for filler", g_cfgGrayFiller,
+        "Boxes for items their world calls filler show in grays, so you can tell at a glance "
+        "they aren't progression or useful. Traps keep their colour.");
     add_bound(ctx, left, UI_CONTROL_STRING, "SteamGridDB API key", g_cfgSgdbKey,
         "Free: sign in at steamgriddb.com, then Preferences, API, and copy your key here. "
         "It's only sent to SteamGridDB. Leave it empty and items stay Sols.");
@@ -127,6 +229,10 @@ static ModResult build_status_tab(ModContext* ctx, UiWindowHandle, UiElementHand
 }
 
 static ModResult update_status_tab(ModContext* ctx, void*, ModError*) {
+    if (g_modelsGroup != 0 && g_modelsGroupOff != !cfg_on(g_cfgNativeModels)) {
+        g_modelsGroupOff = !g_modelsGroupOff;
+        svc_mng.ui->elem_set_class(ctx, g_modelsGroup, "ap-off", g_modelsGroupOff);
+    }
     if (g_coverStatusText != 0) {
         static std::string shownCovers;
         const std::string now = covers::status();
@@ -171,6 +277,9 @@ void open_status_window(ModContext*, void*) {
         std::string out = kWindowRcss;
         out += ".ap-emoji-btn { padding-left: 42dp; font-size: 15dp; text-align: left; }\n";
         out += ".ap-emoji-glyph { font-size: 26dp; min-width: 52dp; padding: 4dp 8dp; }\n";
+        // A row that's off, looking like the game's disabled rows (controls.rcss).
+        out += "select-button.ap-off, select-button.ap-off:selected, select-button.ap-off:active "
+               "{ opacity: 0.35; }\n";
         for (const auto& e : emoji::picker()) {
             out += fmt::format(".ap-e-{} {{ decorator: image({} contain left center); }}\n", e.file,
                 emoji::image_source(e.file));
@@ -185,6 +294,8 @@ void open_status_window(ModContext*, void*) {
         g_statusWindow = 0;
         g_statusWindowText = 0;
         g_coverStatusText = 0;
+        g_modelStatusText = 0;
+        g_modelsGroup = 0;
         g_trackerSummary = g_trackerProgress = g_trackerList = 0;
         g_trackerGroups.clear();
         g_logElem = 0;
