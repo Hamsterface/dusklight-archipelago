@@ -280,6 +280,14 @@ bool check_covers() {
         {"width":920,"height":430,"thumb":"https://cdn/wide.jpg"},
         {"width":600,"height":900,"thumb":"https://cdn/tall.jpg"}]})");
     auto id = [](std::optional<int64_t> v) { return v ? std::to_string(*v) : std::string{"none"}; };
+    // Red, green, blue, white and black texels (alphas kept), then two bytes of a partial texel.
+    std::vector<uint8_t> texels = {255, 0, 0, 128, 0, 255, 0, 255, 0, 0, 255, 0, 255, 255, 255, 255,
+        0, 0, 0, 7, 200, 100};
+    ap::cover_art::to_gray(texels.data(), texels.size());
+    std::string gray;
+    for (const uint8_t v : texels) {
+        gray += (gray.empty() ? "" : " ") + std::to_string(v);
+    }
     struct Check {
         const char* what;
         std::string got;
@@ -300,6 +308,7 @@ bool check_covers() {
         {"covers: portrait grid first", pick_grid(grids), "https://cdn/tall.jpg"},
         {"covers: url encoding", url_encode("Pok\xC3\xA9mon: Red & Blue"), "Pok%C3%A9mon%3A%20Red%20%26%20Blue"},
         {"covers: file stem", file_stem("A Link to the Past").substr(0, 19), "a-link-to-the-past-"},
+        {"covers: grays", gray, "76 76 76 128 149 149 149 255 28 28 28 0 255 255 255 255 0 0 0 7 200 100"},
     };
     bool ok = true;
     for (const Check& check : checks) {

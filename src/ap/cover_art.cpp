@@ -439,6 +439,13 @@ std::string file_stem(const std::string& game) {
     return (stem.empty() ? std::string{"game"} : stem) + "-" + suffix;
 }
 
+void to_gray(uint8_t* rgba, size_t size) {
+    for (size_t i = 0; i + 3 < size; i += 4) {
+        const uint32_t y = (rgba[i] * 77u + rgba[i + 1] * 150u + rgba[i + 2] * 29u) >> 8;
+        rgba[i] = rgba[i + 1] = rgba[i + 2] = static_cast<uint8_t>(y);
+    }
+}
+
 std::optional<Image> process(const uint8_t* data, size_t size) {
     if (data == nullptr || size == 0 || size > 32u * 1024 * 1024) {
         return std::nullopt;

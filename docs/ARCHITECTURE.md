@@ -119,7 +119,9 @@ except what's listed here). Ours:
   after. Frame interpolation uses `dusk::interp` functions resolved by mangled name through the
   symbol manifest (not exported); without them the box moves at 30 Hz. Covers come from
   SteamGridDB with the player's own key (`ap_covers.cpp`), cached once per game, decoded off-thread
-  with stb_image into `GX_TF_RGBA8_PC` textures with mips.
+  with stb_image into `GX_TF_RGBA8_PC` textures with mips. Each cover also gets a gray copy
+  (texture, spine and icon; `cover_art::to_gray`), drawn for items whose placement flags have
+  none of progression, useful or trap set; items with no flags stay in colour.
 - **The text box icon.** `dMsgScrnItem_c` builds its icon from a 3 KB buffer and sizes it from
   that image, so a post-hook on its `exec` swaps the picture's texture for the cover's own
   `ResTIMG` and draws it square. The box works out its item from the message id, so ours reads as

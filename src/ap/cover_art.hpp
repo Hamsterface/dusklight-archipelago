@@ -74,4 +74,8 @@ struct Image {
 // mips, alpha forced opaque. nullopt if it isn't an image stb_image can read.
 std::optional<Image> process(const uint8_t* data, size_t size);
 
+// RGBA8 texels to grays of the same brightness (Rec. 601 weights), alpha kept: filler items'
+// boxes. Bytes past the last whole texel are left alone.
+void to_gray(uint8_t* rgba, size_t size);
+
 }  // namespace ap::cover_art
