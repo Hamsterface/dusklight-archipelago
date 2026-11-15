@@ -110,6 +110,9 @@ static ModResult build_status_tab(ModContext* ctx, UiWindowHandle, UiElementHand
         "Items that belong to other worlds show as the box of the game they're for, with its "
         "cover art, instead of a Sol. Covers come from SteamGridDB with your own API key and "
         "download once per game. Games without art stay Sols.");
+    add_bound(ctx, left, UI_CONTROL_TOGGLE, "Gray boxes for filler", g_cfgGrayFiller,
+        "Boxes for items their world calls filler show in grays, so you can tell at a glance "
+        "they aren't progression or useful. Traps keep their colour.");
     add_bound(ctx, left, UI_CONTROL_STRING, "SteamGridDB API key", g_cfgSgdbKey,
         "Free: sign in at steamgriddb.com, then Preferences, API, and copy your key here. "
         "It's only sent to SteamGridDB. Leave it empty and items stay Sols.");

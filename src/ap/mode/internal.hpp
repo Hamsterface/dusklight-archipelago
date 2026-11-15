@@ -260,6 +260,7 @@ inline ConfigVarHandle g_cfgBoxes = 0;     // other worlds' items as game boxes
 inline ConfigVarHandle g_cfgSgdbKey = 0;   // the player's SteamGridDB API key
 inline ConfigVarHandle g_cfgBoxChoice = 0; // 0: not asked yet, 1: game boxes, 2: Sols
 inline ConfigVarHandle g_cfgSkipFinished = 0; // strike out checks holding finished players' items
+inline ConfigVarHandle g_cfgGrayFiller = 0;    // filler items' game boxes in grays
 template <typename T>
 bool read_blob(const char* name, T& out) {
     size_t size = 0;

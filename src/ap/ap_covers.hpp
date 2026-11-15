@@ -24,6 +24,11 @@ struct Cover {
     // A ResTIMG (header, then RGBA8 texels with mips) of the cover on a transparent square, for
     // the get-item text box's icon picture.
     std::vector<uint8_t> iconTimg;
+    // The same in grays, for filler items.
+    GXTexObj grayTexture;
+    GXColor graySpine;
+    std::vector<uint8_t> grayTexels;
+    std::vector<uint8_t> grayIconTimg;
 };
 
 // Every frame: the current settings, then any finished downloads and decodes.

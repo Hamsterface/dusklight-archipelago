@@ -96,6 +96,11 @@ ModResult activate() {
         skip.type = CONFIG_VAR_BOOL;
         skip.default_bool = true;
         svc_mng.config->register_var(svc_mng.mod_ctx, &skip, &g_cfgSkipFinished);
+        ConfigVarDesc gray = CONFIG_VAR_DESC_INIT;
+        gray.name = "grayFillerBoxes";
+        gray.type = CONFIG_VAR_BOOL;
+        gray.default_bool = true;
+        svc_mng.config->register_var(svc_mng.mod_ctx, &gray, &g_cfgGrayFiller);
     }
 
     svc_mng.item->observe_gives(svc_mng.mod_ctx, observe_give, nullptr, &g_observer);
