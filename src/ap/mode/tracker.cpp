@@ -2,6 +2,8 @@
 
 #include "internal.hpp"
 
+#include "../../../include/dusklight_archipelago/tracker.h"
+
 namespace ap::internal {
 namespace {
 
@@ -340,5 +342,92 @@ ModResult update_tracker_tab(ModContext* ctx, void*, ModError*) {
     }
     return MOD_OK;
 }
+
+// ---------------------------------------------------------------------------------------
+// ApTrackerService: the same answers for other mods (include/dusklight_archipelago/tracker.h).
+
+static uint32_t service_state(const TrackerCheck& c) {
+    switch (check_state(c)) {
+    case CheckState::Done: return AP_CHECK_DONE;
+    case CheckState::InLogic: return AP_CHECK_IN_LOGIC;
+    case CheckState::NotYet: return AP_CHECK_NOT_YET;
+    case CheckState::Skippable: return AP_CHECK_NOT_NEEDED;
+    case CheckState::Unknown: break;
+    }
+    return AP_CHECK_UNKNOWN;
+}
+
+static bool service_active() {
+    return g_phase == Phase::Playing && g_haveSlot;
+}
+
+static ModResult svc_state_version(ModContext*, uint64_t* out) {
+    if (out == nullptr) {
+        return MOD_INVALID_ARGUMENT;
+    }
+    // Everything the answers depend on: what's in logic and who has finished (both bump
+    // g_trackerVersion), what's done, and whether there's a save at all.
+    static std::tuple<uint64_t, size_t, bool> seen{0, 0, false};
+    static uint64_t version = 1;
+    const std::tuple<uint64_t, size_t, bool> now{g_trackerVersion, g_checked.size(), service_active()};
+    if (now != seen) {
+        seen = now;
+        ++version;
+    }
+    *out = version;
+    return MOD_OK;
+}
+
+static ModResult svc_is_active(ModContext*, bool* out) {
+    if (out == nullptr) {
+        return MOD_INVALID_ARGUMENT;
+    }
+    *out = service_active();
+    return MOD_OK;
+}
+
+static ModResult svc_check_count(ModContext*, size_t* out) {
+    if (out == nullptr) {
+        return MOD_INVALID_ARGUMENT;
+    }
+    *out = service_active() ? g_trackerChecks.size() : 0;
+    return MOD_OK;
+}
+
+static ModResult svc_check_at(ModContext*, size_t index, ApCheckInfo* out) {
+    if (out == nullptr || out->struct_size < sizeof(ApCheckInfo) || !service_active() ||
+        index >= g_trackerChecks.size()) {
+        return MOD_INVALID_ARGUMENT;
+    }
+    const TrackerCheck& c = g_trackerChecks[index];
+    const auto& regions = tracker_regions();
+    out->name = c.name.c_str();
+    out->region = c.region >= 0 && c.region < static_cast<int>(regions.size()) ? regions[c.region].label : "";
+    out->state = service_state(c);
+    return MOD_OK;
+}
+
+static ModResult svc_check_state(ModContext*, const char* name, uint32_t* out) {
+    if (name == nullptr || out == nullptr || !service_active()) {
+        return MOD_INVALID_ARGUMENT;
+    }
+    for (const auto& c : g_trackerChecks) {
+        if (c.name == name) {
+            *out = service_state(c);
+            return MOD_OK;
+        }
+    }
+    return MOD_INVALID_ARGUMENT;
+}
+
+constexpr ApTrackerService g_trackerService = {
+    .header = SERVICE_HEADER(ApTrackerService, AP_TRACKER_SERVICE_MAJOR, AP_TRACKER_SERVICE_MINOR),
+    .state_version = svc_state_version,
+    .is_active = svc_is_active,
+    .check_count = svc_check_count,
+    .check_at = svc_check_at,
+    .check_state = svc_check_state,
+};
+EXPORT_SERVICE(g_trackerService);
 
 }  // namespace ap::internal

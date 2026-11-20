@@ -116,9 +116,9 @@ API). The mod asks on first play, and you can change it later under **Other play
 the Status page (F1). Covers download once to `\TwilitRealm\Dusklight\mod_data\com.noahsmaximum.dusklight_archipelago\archipelago\covers`. Games
 SteamGridDB doesn't have stay Sols, and so does everything if there's no key.
 
-Boxes for items their world marks as filler show in grays, so you can tell them apart from
-progression and useful items at a glance. Traps keep their colour. Turn this off with **Gray
-boxes for filler** on the Status page.
+To tell filler apart at a glance, turn on **Gray boxes for filler** on the Status page: boxes
+for items their world marks as filler then show in grays. Traps keep their colour. It's off by
+default.
 
 The **Covers** tab lists every game in the room and the cover it got. Covers the mod wasn't sure
 about are marked "best guess". Pick a game to search SteamGridDB yourself and choose the right
@@ -229,6 +229,14 @@ refused. Run it with no arguments for the default suite.
 The trusted roots in `src/ap/ca_bundle.pem` come from
 [curl.se/docs/caextract.html](https://curl.se/docs/caextract.html) (Mozilla's list). Replace
 that file to refresh them; nothing else needs to change.
+
+## For mod authors
+
+Other mods can read the tracker (every check, and whether it's done, in logic, not yet or not
+needed) through `ApTrackerService`. Include
+[`include/dusklight_archipelago/tracker.h`](include/dusklight_archipelago/tracker.h) and import
+it with `IMPORT_OPTIONAL_SERVICE(ApTrackerService, svc_ap_tracker)`; the header explains the
+rest.
 
 ## Credits
 

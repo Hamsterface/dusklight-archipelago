@@ -3,7 +3,7 @@ You don't need a separate client and you don't patch anything. Pick Archipelago 
 Features
 
 * Connects from inside the game. Checks go out as you collect them, and items from other players arrive automatically. Anything you pick up while disconnected gets sent the next time you connect, and saves reconnect on their own.
-* Other players' items say whose they are when you find them ("You found Ava's Gunpowder!") and can show as their game's box with its cover art, on the ground, in Link's hands and in the text box. Covers come from SteamGridDB with your own free API key; without one they stay Sols. If a game's cover is wrong or missing, search for the right one, switch it to a Sol, or use your own art from the Covers tab.
+* Other players' items say whose they are when you find them ("You found Ava's Gunpowder!") and can show as their game's box with its cover art, on the ground, in Link's hands and in the text box. Covers come from SteamGridDB with your own free API key; without one they stay Sols. If a game's cover is wrong or missing, search for the right one, switch it to a Sol, or use your own art from the Covers tab. Optionally, filler items' boxes can show in grays.
 * Item jingles match how important the item is to its owner: the full fanfare for progression, smaller ones for useful items and filler, and a "nope" sound for traps.
 * Built-in Archipelago tab (F1):
    * Status: connection, reconnect or change server, death link toggle
@@ -24,6 +24,7 @@ Features
 * Shuffled Dungeons option (0–9) so you can control how long a run is.
 * Optional Collect Dungeon on Completion: beat a boss and every check left in that dungeon is collected at once, for everyone.
 * Refuses a seed made with a different apworld version, so logic never silently differs from Archipelago's.
+* Other mods can read the tracker through a public service (see the repo's README).
 * One download covers every platform Dusklight runs on, and it runs alongside Dusklight's built-in randomizer without conflicts.
 
 Requirements: Dusklight 2.0.1 or newer. Put `archipelago.dusk` in your Dusklight mods folder and `tp_dusklight.apworld` in Archipelago's `custom_worlds` folder. You'll also need a YAML: use one of the presets or the included template. Game boxes need a free SteamGridDB API key (optional).

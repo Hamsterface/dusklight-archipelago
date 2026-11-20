@@ -99,7 +99,7 @@ ModResult activate() {
         ConfigVarDesc gray = CONFIG_VAR_DESC_INIT;
         gray.name = "grayFillerBoxes";
         gray.type = CONFIG_VAR_BOOL;
-        gray.default_bool = true;
+        gray.default_bool = false;  // the art as it is unless the player asks
         svc_mng.config->register_var(svc_mng.mod_ctx, &gray, &g_cfgGrayFiller);
     }
 

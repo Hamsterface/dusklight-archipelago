@@ -11,11 +11,18 @@ Then in Dusklight: use the arrows on the Play button to pick **Archipelago**, st
 
 Needs Dusklight 2.0.1 or newer. This mod carries its own copy of the randomizer, so Dusklight's built-in Randomizer doesn't need updating or removing; the two don't interfere.
 
-## What's new in 1.8.0
+## What's new in 1.9.0
 
-- **Tracker strikes out checks nobody needs** (#3). When a player finishes their game, every check of yours holding one of their items is crossed out as "not needed" and left off the in-logic list. It updates live while you play. Turn it off on the Status tab.
-- **Held items keep their own game box** (#4). Another Archipelago item spawning nearby while Link held one up could swap its cover (and its text and jingle) for the other item's. The held item now knows its own check.
-- The apworld is unchanged (1.9.0), and 1.7.x multiworlds keep working: just swap in the new `archipelago.dusk`.
+Includes everything from the 1.8.0 beta.
+
+- **Tracker strikes out checks nobody needs** (#3). When a player finishes their game, every check of yours holding one of their items is crossed out as "not needed" and left off the in-logic list. It updates live. Turn it off on the Status tab.
+- **Covers tab** for game boxes. Every game in the room with the cover it got; covers the mod wasn't sure of are marked "best guess". Pick a game to search SteamGridDB and choose the right one, switch it to the Sol, or use your own art (the tab shows where to put it). Choices are remembered for every room. Names with a platform in them, like "Link's Awakening Switch", now find their game.
+- **Gray boxes for filler** (#8, by @Hamsterface). An option on the Status page, off by default: boxes for items their world calls filler show in grays. Traps keep their colour.
+- **Held items keep their own game box** (#4). Another Archipelago item spawning nearby while Link held one up could swap its cover, text and jingle for the other item's.
+- **Hearts are no longer always progression** (#7). Heart Containers and Pieces of Heart only count as progression when the Hyrule Barrier or Big Key requirement is Hearts. The same goes for anything else only an unused setting needs (Magic Armor, Fused Shadows and Mirror Shards when nothing asks for them, Twilight Tears when the twilights are cleared). This is the apworld (1.9.1).
+- **Tracker service for other mods** (#6). Other mods can read every check's state through `ApTrackerService`: see [`include/dusklight_archipelago/tracker.h`](https://github.com/noahsmaximum/dusklight-archipelago/blob/archipelago/include/dusklight_archipelago/tracker.h).
+
+Multiworlds generated with apworld 1.9.0 keep working: just swap in the new `archipelago.dusk`. Use apworld 1.9.1 for new seeds.
 
 ## Updating
 

@@ -214,7 +214,9 @@ class Compiler:
         self.player = player
         self.event_item = event_item
         self.golden_bugs = golden_bugs
-        self._macro_cache: dict[tuple[str, object], Rule] = {}
+        # Each macro's rule, and the items it needs (see compile_macro).
+        self._macro_cache: dict[tuple[str, object], tuple[Rule, frozenset[str]]] = {}
+        # Items some live rule needs: the world classifies these as progression.
         self.referenced_items: set[str] = set()
 
     # Combinators -----------------------------------------------------------------------
@@ -259,6 +261,20 @@ class Compiler:
         return self.compile(self.parser.parse(req), forms)
 
     def compile(self, node: Node, forms: Union[int, AreaForms]) -> Rule:
+        # A rule that compiles to a constant needs no item, whatever it mentions: in
+        # "Hyrule_Barrier_Requirements == Hearts and hearts(..)" with another requirement, the
+        # comparison is False and so is the whole rule, so hearts aren't progression.
+        outer = self.referenced_items
+        self.referenced_items = set()
+        try:
+            rule = self._compile(node, forms)
+        finally:
+            mine, self.referenced_items = self.referenced_items, outer
+        if rule is not True and rule is not False:
+            outer |= mine
+        return rule
+
+    def _compile(self, node: Node, forms: Union[int, AreaForms]) -> Rule:
         kind = node[0]
         p = self.player
         if kind == "true":
@@ -284,12 +300,21 @@ class Compiler:
             return lambda state: state.has(ev, p)
         if kind == "macro":
             key = (node[1], forms if isinstance(forms, int) else id(forms))
-            rule = self._macro_cache.get(key)
-            if rule is None:
+            cached = self._macro_cache.get(key)
+            if cached is None:
                 # Macros are parsed with forceLogic and may reference settings: parse lazily.
-                rule = self.compile(self.parser.parse_macro(node[1]), forms)
-                self._macro_cache[key] = rule
-            return rule
+                # The items it needs are cached with it: a macro first met inside a rule that
+                # turns out constant still needs them wherever it's used for real.
+                outer = self.referenced_items
+                self.referenced_items = set()
+                try:
+                    rule = self.compile(self.parser.parse_macro(node[1]), forms)
+                finally:
+                    needs, self.referenced_items = frozenset(self.referenced_items), outer
+                cached = (rule, needs)
+                self._macro_cache[key] = cached
+            self.referenced_items |= cached[1]
+            return cached[0]
         if kind in ("human", "wolf", "day", "night", "twilight_wolf", "twilight_human"):
             if isinstance(forms, int):
                 mask = {"human": HUMAN, "wolf": WOLF, "day": DAY, "night": NIGHT,

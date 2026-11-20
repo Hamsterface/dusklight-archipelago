@@ -175,6 +175,11 @@ in `g_redeemPending` so the give observer doesn't mistake them for server items.
   twilight section. With the Shadow Crystal, a transformable uncleared-twilight area links its
   two twilight copies.
 - A macro body only sees macros defined above it (as the C++ loader registers them).
+- **Progression** is the items a live rule mentions (`Compiler.referenced_items`). Anything that
+  compiles to a constant adds nothing, so an item behind a setting this seed doesn't have (hearts
+  for a barrier that isn't set to Hearts) is useful, not progression. Macros cache the items
+  they need alongside their rule, so a macro first met inside a dead rule still counts where
+  it's used for real.
 - Locations defined in several areas live in `Menu` with `can_reach(hub)` in their rule.
 - **Shuffled Dungeons**: unshuffled dungeons are picked from the world's seeded random, and their
   locations are locked to vanilla items and sent to the game as explicit placements (the
@@ -204,6 +209,10 @@ apworld does. `rig/tracker_parity.py` compares the two sphere by sphere.
 player's `_read_client_status_<team>_<slot>`, and a check whose item (slot data `placements`)
 belongs to a player at CLIENT_GOAL (30) is shown struck out. Item link groups are skipped; they
 have no status of their own.
+
+Other mods read the same answers through `ApTrackerService`
+(`include/dusklight_archipelago/tracker.h`, exported from `mode/tracker.cpp`). It's a public API:
+add fields only at the end, bumping `AP_TRACKER_SERVICE_MINOR`, and never change existing ones.
 
 ### UI and the host
 
