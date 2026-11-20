@@ -93,7 +93,10 @@ jobs:
           args=(-G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{matrix.cmake_args}})
           if [[ -n "${{matrix.android_ndk}}" ]]; then
             args+=(-DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/${{matrix.android_ndk}}/build/cmake/android.toolchain.cmake"
-                   -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-28)
+                   -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-28
+                   # Newer CMake scans for C++ modules and tries to build the runner's own
+                   # GCC std module with the NDK's clang, which fails; we don't use modules.
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF)
           fi
           cmake -B build "${args[@]}"
 
