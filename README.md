@@ -116,6 +116,10 @@ API). The mod asks on first play, and you can change it later under **Other play
 the Status page (F1). Covers download once to `\TwilitRealm\Dusklight\mod_data\com.noahsmaximum.dusklight_archipelago\archipelago\covers`. Games
 SteamGridDB doesn't have stay Sols, and so does everything if there's no key.
 
+Boxes for items their world marks as filler show in grays, so you can tell them apart from
+progression and useful items at a glance. Traps keep their colour. Turn this off with **Gray
+boxes for filler** on the Status page.
+
 The **Covers** tab lists every game in the room and the cover it got. Covers the mod wasn't sure
 about are marked "best guess". Pick a game to search SteamGridDB yourself and choose the right
 one, switch it to the Sol, or use your own art: a PNG or JPG named after the game (as the room

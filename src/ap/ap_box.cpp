@@ -116,6 +116,7 @@ public:
 
     Mtx model{};  // box space (centred on the replaced model) to world
     const covers::Cover* cover = nullptr;
+    bool gray = false;
     dKy_tevstr_c* tevStr = nullptr;
     float hw = 0.0f;
     float hh = 0.0f;
@@ -167,7 +168,7 @@ void BoxPacket::draw() {
     // Faces: the cover on both big sides (reading correctly from each), edges darker.
     const GXColor front{255, 255, 255, 255};
     const GXColor back{225, 225, 225, 255};
-    GXLoadTexObj(const_cast<GXTexObj*>(&cover->texture), GX_TEXMAP0);
+    GXLoadTexObj(const_cast<GXTexObj*>(gray ? &cover->grayTexture : &cover->texture), GX_TEXMAP0);
     GXBegin(GX_QUADS, GX_VTXFMT0, 8);
     vertex(-hw, hh, hd, front, 0.0f, 0.0f);
     vertex(hw, hh, hd, front, 1.0f, 0.0f);
@@ -179,9 +180,10 @@ void BoxPacket::draw() {
     vertex(hw, -hh, -hd, back, 0.0f, 1.0f);
     GXEnd();
 
-    const GXColor side = shade(cover->spine, 1.0f);
-    const GXColor top = shade(cover->spine, 1.25f);
-    const GXColor bottom = shade(cover->spine, 0.7f);
+    const GXColor spine = gray ? cover->graySpine : cover->spine;
+    const GXColor side = shade(spine, 1.0f);
+    const GXColor top = shade(spine, 1.25f);
+    const GXColor bottom = shade(spine, 0.7f);
     GXLoadTexObj(&g_white, GX_TEXMAP0);
     GXBegin(GX_QUADS, GX_VTXFMT0, 16);
     vertex(hw, hh, hd, side, 0.5f, 0.5f);
@@ -213,7 +215,7 @@ uint32_t g_tick = 0;
 
 }  // namespace
 
-bool draw(daItemBase_c* item, const covers::Cover& cover, bool held) {
+bool draw(daItemBase_c* item, const covers::Cover& cover, bool held, bool gray) {
     J3DModel* model = item != nullptr ? item->mpModel : nullptr;
     if (model == nullptr || model->getModelData() == nullptr) {
         return false;
@@ -231,6 +233,7 @@ bool draw(daItemBase_c* item, const covers::Cover& cover, bool held) {
     }
     p->lastSeen = g_tick;
     p->cover = &cover;
+    p->gray = gray;
     p->tevStr = &item->tevStr;
 
     // Size and centre from the model being replaced, so it sits where that did.

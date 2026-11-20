@@ -15,8 +15,8 @@ namespace ap::box {
 
 // Draws `item` as a box with this cover instead of its model. False if it can't (no model).
 // `held`: Link is holding it up, so it stands straight; in the world it leans back a little and
-// sits smaller, like a box on display as it turns.
-bool draw(daItemBase_c* item, const covers::Cover& cover, bool held);
+// sits smaller, like a box on display as it turns. `gray`: the cover in grays (a filler item).
+bool draw(daItemBase_c* item, const covers::Cover& cover, bool held, bool gray);
 
 // Once per game tick: forgets boxes whose items are gone.
 void tick();

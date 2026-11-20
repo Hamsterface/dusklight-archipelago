@@ -598,6 +598,21 @@ void poll_decodes() {
             timg->imageOffset = static_cast<s32>(sizeof(ResTIMG));
             std::memcpy(cover->iconTimg.data() + sizeof(ResTIMG), image->icon.data(), image->icon.size());
         }
+        // Filler items' boxes: the same cover in grays.
+        cover->grayTexels = cover->texels;
+        cover_art::to_gray(cover->grayTexels.data(), cover->grayTexels.size());
+        uint8_t spine[4] = {cover->spine.r, cover->spine.g, cover->spine.b, 255};
+        cover_art::to_gray(spine, sizeof(spine));
+        cover->graySpine = GXColor{spine[0], spine[1], spine[2], 255};
+        GXInitTexObj(&cover->grayTexture, cover->grayTexels.data(), static_cast<u16>(image->width),
+            static_cast<u16>(image->height), GX_TF_RGBA8_PC, GX_CLAMP, GX_CLAMP, GX_TRUE);
+        GXInitTexObjLOD(&cover->grayTexture, GX_LIN_MIP_LIN, GX_LINEAR, 0.0f,
+            static_cast<float>(image->mips - 1), 0.0f, GX_FALSE, GX_TRUE, GX_ANISO_4);
+        if (!cover->iconTimg.empty()) {
+            cover->grayIconTimg = cover->iconTimg;
+            cover_art::to_gray(cover->grayIconTimg.data() + sizeof(ResTIMG),
+                cover->grayIconTimg.size() - sizeof(ResTIMG));
+        }
         e.cover = std::move(cover);
         e.state = State::Ready;
     }
